@@ -18,6 +18,18 @@ from bitcoin.core.script import CScript, IsLowDERSignature
 from bitcoin.core.key import CPubKey, is_libsec256k1_available, use_libsecp256k1_for_signing
 from bitcoin.wallet import *
 
+def _wif_to_wojak_wif(wif_str):
+    """Decode any base58check WIF and re-encode with current (Wojakcoin) SECRET_KEY version."""
+    from bitcoin.base58 import decode
+    from bitcoin.core import Hash
+    raw = decode(wif_str)
+    if raw[-4:] != Hash(raw[:-4])[:4]:
+        raise ValueError('Invalid WIF checksum')
+    secret = raw[1:33]
+    compressed = len(raw) == 38 and raw[33] == 1
+    return str(CBitcoinSecret.from_secret_bytes(secret, compressed))
+
+
 class Test_CBitcoinAddress(unittest.TestCase):
     def test_create_from_string(self):
         """Create CBitcoinAddress's from strings"""
@@ -31,8 +43,8 @@ class Test_CBitcoinAddress(unittest.TestCase):
             elif isinstance(addr, CBech32BitcoinAddress):
                 self.assertEqual(addr.witver, expected_version)
 
-        T('1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa',
-          x('62e907b15cbf27d5425399ebf6f0fb50ebb88f18'), 0,
+        T('WXh2FwQQua6cNMCY91mvrUwsHbiy5zwmpZ',
+          x('62e907b15cbf27d5425399ebf6f0fb50ebb88f18'), 0x49,
           P2PKHBitcoinAddress)
 
         T('37k7toV1Nv4DfmQbmZ8KuZDQCYK9x5KpzP',
@@ -66,7 +78,7 @@ class Test_CBitcoinAddress(unittest.TestCase):
 
         T('a914000000000000000000000000000000000000000087', '31h1vYVSYuKP6AhS86fbRdMw9XHieotbST',
           P2SHBitcoinAddress)
-        T('76a914000000000000000000000000000000000000000088ac', '1111111111111111111114oLvT2',
+        T('76a914000000000000000000000000000000000000000088ac', 'WNg2svm2qApxheBKndKGQ9sRwporvRgRpT',
           P2PKHBitcoinAddress)
         T('0014751e76e8199196d454941c45d1b3a323f1433bd6',
           'bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4',
@@ -128,7 +140,7 @@ class Test_CBitcoinAddress(unittest.TestCase):
         T('31h1vYVSYuKP6AhS86fbRdMw9XHieotbST',
           'a914000000000000000000000000000000000000000087')
 
-        T('1111111111111111111114oLvT2',
+        T('WNg2svm2qApxheBKndKGQ9sRwporvRgRpT',
           '76a914000000000000000000000000000000000000000088ac')
 
         T('bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4',
@@ -145,7 +157,7 @@ class Test_CBitcoinAddress(unittest.TestCase):
         T('31h1vYVSYuKP6AhS86fbRdMw9XHieotbST',
           'a914000000000000000000000000000000000000000087')
 
-        T('1111111111111111111114oLvT2',
+        T('WNg2svm2qApxheBKndKGQ9sRwporvRgRpT',
           '76a914000000000000000000000000000000000000000088ac')
 
 
@@ -171,9 +183,9 @@ class Test_P2PKHBitcoinAddress(unittest.TestCase):
             with self.assertRaises(CBitcoinAddressError):
                 P2PKHBitcoinAddress.from_scriptPubKey(scriptPubKey, accept_non_canonical_pushdata=False)
 
-        T('76a94c14000000000000000000000000000000000000000088ac', '1111111111111111111114oLvT2')
-        T('76a94d1400000000000000000000000000000000000000000088ac', '1111111111111111111114oLvT2'),
-        T('76a94e14000000000000000000000000000000000000000000000088ac', '1111111111111111111114oLvT2')
+        T('76a94c14000000000000000000000000000000000000000088ac', 'WNg2svm2qApxheBKndKGQ9sRwporvRgRpT')
+        T('76a94d1400000000000000000000000000000000000000000088ac', 'WNg2svm2qApxheBKndKGQ9sRwporvRgRpT')
+        T('76a94e14000000000000000000000000000000000000000000000088ac', 'WNg2svm2qApxheBKndKGQ9sRwporvRgRpT')
 
         # make sure invalid scripts raise CBitcoinAddressError
         with self.assertRaises(CBitcoinAddressError):
@@ -190,13 +202,13 @@ class Test_P2PKHBitcoinAddress(unittest.TestCase):
                 P2PKHBitcoinAddress.from_scriptPubKey(scriptPubKey, accept_bare_checksig=False)
 
         # compressed
-        T('21000000000000000000000000000000000000000000000000000000000000000000ac', '14p5cGy5DZmtNMQwTQiytBvxMVuTmFMSyU')
+        T('21000000000000000000000000000000000000000000000000000000000000000000ac', 'WSV7VCj73jbr4zbGF33FHLoPJKiKgGhgkX')
 
         # uncompressed
-        T('410000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000ac', '1QLFaVVt99p1y18zWSZnespzhkFxjwBbdP')
+        T('410000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000ac', 'Wn1HTRFuyKdyfeKKJ4t442hRea4pcg7y9X')
 
         # non-canonical encoding
-        T('4c21000000000000000000000000000000000000000000000000000000000000000000ac', '14p5cGy5DZmtNMQwTQiytBvxMVuTmFMSyU')
+        T('4c21000000000000000000000000000000000000000000000000000000000000000000ac', 'WSV7VCj73jbr4zbGF33FHLoPJKiKgGhgkX')
 
         # odd-lengths are *not* accepted
         with self.assertRaises(CBitcoinAddressError):
@@ -210,14 +222,14 @@ class Test_P2PKHBitcoinAddress(unittest.TestCase):
             self.assertEqual(str(addr), expected_str_addr)
 
         T(x('0378d430274f8c5ec1321338151e9f27f4c676a008bdf8638d07c0b6be9ab35c71'),
-          '1C7zdTfnkzmr13HfA2vNm5SJYRK6nEKyq8')
+          'WZo2WPRpbAbohgTywfEeAEJjVF7xgRWEj7')
         T(x('0478d430274f8c5ec1321338151e9f27f4c676a008bdf8638d07c0b6be9ab35c71a1518063243acd4dfe96b66e3f2ec8013c8e072cd09b3834a19f81f659cc3455'),
-          '1JwSSubhmg6iPtRjtyqhUYYH7bZg3Lfy1T')
+          'WgcUKqMjbqvg6Xc4gc9xshQi4RNY1S38TD')
 
         T(CPubKey(x('0378d430274f8c5ec1321338151e9f27f4c676a008bdf8638d07c0b6be9ab35c71')),
-          '1C7zdTfnkzmr13HfA2vNm5SJYRK6nEKyq8')
+          'WZo2WPRpbAbohgTywfEeAEJjVF7xgRWEj7')
         T(CPubKey(x('0478d430274f8c5ec1321338151e9f27f4c676a008bdf8638d07c0b6be9ab35c71a1518063243acd4dfe96b66e3f2ec8013c8e072cd09b3834a19f81f659cc3455')),
-          '1JwSSubhmg6iPtRjtyqhUYYH7bZg3Lfy1T')
+          'WgcUKqMjbqvg6Xc4gc9xshQi4RNY1S38TD')
 
     def test_from_invalid_pubkeys(self):
         """Create P2PKHBitcoinAddress's from invalid pubkeys"""
@@ -228,9 +240,9 @@ class Test_P2PKHBitcoinAddress(unittest.TestCase):
             self.assertEqual(str(addr), expected_str_addr)
 
         T(x(''),
-          '1HT7xU2Ngenf7D4yocz2SAcnNLW7rK8d4E')
+          'Wf89qPnQWpccorFJbFJHqKVDKAJykztZf8')
         T(x('0378d430274f8c5ec1321338151e9f27f4c676a008bdf8638d07c0b6be9ab35c72'),
-          '1L9V4NXbNtZsLjrD3nkU7gtEYLWRBWXLiZ')
+          'WhpWwJHdD4Pq3P2XqR4jWqkfVAKH8g7HqJ')
 
         # With accept_invalid=False we should get CBitcoinAddressError's
         with self.assertRaises(CBitcoinAddressError):
@@ -247,15 +259,18 @@ class Test_CBitcoinSecret(unittest.TestCase):
             self.assertEqual(b2x(key.pub), expected_hex_pubkey)
             self.assertEqual(key.is_compressed, expected_is_compressed_value)
 
-        T('5KJvsngHeMpm884wtkJNzQGaCErckhHJBGFsvd3VyK5qMZXj3hS',
+        wojak_uncompressed = _wif_to_wojak_wif('5KJvsngHeMpm884wtkJNzQGaCErckhHJBGFsvd3VyK5qMZXj3hS')
+        wojak_compressed = _wif_to_wojak_wif('L3p8oAcQTtuokSCRHQ7i4MhjWc9zornvpJLfmg62sYpLRJF9woSu')
+
+        T(wojak_uncompressed,
           '0478d430274f8c5ec1321338151e9f27f4c676a008bdf8638d07c0b6be9ab35c71a1518063243acd4dfe96b66e3f2ec8013c8e072cd09b3834a19f81f659cc3455',
           False)
-        T('L3p8oAcQTtuokSCRHQ7i4MhjWc9zornvpJLfmg62sYpLRJF9woSu',
+        T(wojak_compressed,
           '0378d430274f8c5ec1321338151e9f27f4c676a008bdf8638d07c0b6be9ab35c71',
           True)
 
     def test_sign(self):
-        key = CBitcoinSecret('5KJvsngHeMpm884wtkJNzQGaCErckhHJBGFsvd3VyK5qMZXj3hS')
+        key = CBitcoinSecret(_wif_to_wojak_wif('5KJvsngHeMpm884wtkJNzQGaCErckhHJBGFsvd3VyK5qMZXj3hS'))
         hash = b'\x00' * 32
         sig = key.sign(hash)
 
@@ -272,7 +287,7 @@ class Test_CBitcoinSecret(unittest.TestCase):
         self.assertFalse(key.pub.verify(hash, sig[0:-4] + b'\x00\x00\x00\x00'))
 
     def test_sign_invalid_hash(self):
-        key = CBitcoinSecret('5KJvsngHeMpm884wtkJNzQGaCErckhHJBGFsvd3VyK5qMZXj3hS')
+        key = CBitcoinSecret(_wif_to_wojak_wif('5KJvsngHeMpm884wtkJNzQGaCErckhHJBGFsvd3VyK5qMZXj3hS'))
         with self.assertRaises(TypeError):
           sig = key.sign('0' * 32)
 

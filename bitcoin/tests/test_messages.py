@@ -114,7 +114,11 @@ class Test_msg_mempool(MessageTestCase):
 
 
 class Test_messages(unittest.TestCase):
-    verackbytes = b'\xf9\xbe\xb4\xd9verack\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00]\xf6\xe0\xe2'
+    @classmethod
+    def setUpClass(cls):
+        import bitcoin
+        bitcoin.SelectParams('mainnet')
+        cls.verackbytes = msg_verack().to_bytes()
 
     def test_read_msg_verack(self):
         f = BytesIO(self.verackbytes)

@@ -20,6 +20,7 @@ __version__ = '0.12.2'
 
 # Wojakcoin (WJK) chain parameters - match wojakcore chainparams
 # Mainnet: magic 0x6f8da579, address prefix 0x49 (W), script 0x05, WIF 0xc9, bech32 'bc'
+# Genesis from wojakcore chainparams (getblock <hash> false)
 class MainParams(bitcoin.core.CoreMainParams):
     MESSAGE_START = b'\x6f\x8d\xa5\x79'
     DEFAULT_PORT = 20761
@@ -29,6 +30,9 @@ class MainParams(bitcoin.core.CoreMainParams):
                        'SCRIPT_ADDR': 5,
                        'SECRET_KEY': 0xc9}
     BECH32_HRP = 'bc'
+    GENESIS_BLOCK = bitcoin.core.CBlock.deserialize(bitcoin.core.x(
+        '0100000000000000000000000000000000000000000000000000000000000000000000001a798b6eef464db807d1aac4beb08a463cdd8863b202523cbfa0523225b8942d2a808259ffff001d0b87a14a0101000000010000000000000000000000000000000000000000000000000000000000000000ffffffff2404ffff001d01041c333832303137205072696365205068696c6c69702052657469726573ffffffff0100e40b5402000000434104678afdb0fe5548271967f1a67130b7105cd6a828e03909a67962e0ea1f61deb649f6bc3f4cef38c4f35504e51ec112de5c384df7ba0b8d578a4c702b6bf11d5fac00000000'
+    ))
 
 class TestNetParams(bitcoin.core.CoreTestNetParams):
     MESSAGE_START = b'\x4d\xaa\x61\xf9'
